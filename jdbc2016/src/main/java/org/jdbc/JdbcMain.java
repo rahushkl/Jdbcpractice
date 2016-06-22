@@ -11,6 +11,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.jnit.domain.Customer;
+import org.jnit.domain.Order;
+import org.jnit.domain.OrderStatus;
+import org.jnit.domain.PhoneInformation;
 
 public class JdbcMain {
 	public static void main(String[] args) {
@@ -23,11 +26,17 @@ public class JdbcMain {
 		//customer.setZipCode(85435);
 		//insertCustomerStmt(customer);
 		//JdbcMain.getCustomerData();
-		getCustomerUsingStoredProc(6);
+		//Customer cus = getCustomerDataWithPhoneInfo(1);
+		//System.out.println(cus.getName());
+		//System.out.println(cus.getPhoneInfo().getHome());
+		Customer c = getCustomerWithOrder(1);
+		System.out.println(c.getName());
+		c.getOrders().forEach(o->System.out.println(o.getItem()));
+		//getCustomerUsingStoredProc(6);
 		//List<Customer>customers = getCustomers();
 		//customers.forEach(cust-> System.out.println(cust.getName()));
-		Customer cust = getCustomerbyId(8);
-		System.out.println(cust.getName());
+		//Customer cust = getCustomerbyId(8);
+		//System.out.println(cust.getName());
 	}
 	public static Connection getMeaConnection() throws SQLException{
 		Connection conn;
@@ -67,6 +76,35 @@ public class JdbcMain {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+	public static Customer getCustomerDataWithPhoneInfo(int id){
+		Customer customer = new Customer();
+		
+		try {
+			Connection conn = getMeaConnection();
+			String query = "select c.firstname, c.street, c.city, p.home, p.cell, p.work from javatutorial.customer c join javatutorial.phoneinfo p on c.customerId = p.customerId where c.customerId = ?;";
+			PreparedStatement stmt = conn.prepareStatement(query);
+			PhoneInformation p = new PhoneInformation();
+			stmt.setInt(1, id);
+			ResultSet rs = stmt.executeQuery();
+			while(rs.next()){
+				customer.setName(rs.getString("firstname"));
+				customer.setStreet(rs.getString("street"));
+				customer.setCity(rs.getString("city"));
+				p.setHome(rs.getString("home"));
+				p.setCell(rs.getString("cell"));
+				p.setWork(rs.getString("work"));
+				customer.setPhoneInfo(p);
+			}
+			rs.close();
+			conn.close();
+			stmt.close();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return customer;
 	}
 	public static void insertCustomer(Customer customer){
 		try {
@@ -156,6 +194,56 @@ public class JdbcMain {
 		}
 		return cust;
 	}
+	public static Customer getCustomerWithOrder(int id){
+		Customer customer = new Customer();
+		List<Order>orders = new ArrayList<>();
+		try {
+			Connection conn = getMeaConnection();
+			String query = "select c.firstname, c.city, o.item, o.order_status from javatutorial.customer c join javatutorial.ordersplaced o on c.customerId = o.customerId where c.customerId = ? ;";
+			PreparedStatement ptst = conn.prepareStatement(query);
+			ptst.setInt(1, id);
+			ResultSet rs = ptst.executeQuery();
+			while(rs.next()){
+				customer.setCity(rs.getString("City"));
+				customer.setName(rs.getString("firstname"));
+				Order order = new Order();
+				order.setItem(rs.getString("item"));
+				order.setStatus(OrderStatus.valueOf((rs.getString("order_status"))));
+				orders.add(order);
+				
+			}
+			customer.setOrders(orders);
+			rs.close();
+			conn.close();
+			ptst.close();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return customer;
+	}
+
+	public static void updateCustomer(Customer customer) {
+		try {
+			Connection conn = getMeaConnection();
+			String query = "update customer set firstname = ?, street = ?, city = ?, state = ?, zipcode = ? where customerId = ?";
+			PreparedStatement pst = conn.prepareStatement(query);
+			pst.setString(1, customer.getName());
+			pst.setString(2, customer.getStreet());
+			pst.setString(3, customer.getCity());
+			pst.setString(4, customer.getState());
+			pst.setInt(5, customer.getZipCode());
+			pst.setInt(6, customer.getCustomerId());
+			int noOfRows = pst.executeUpdate();
+			System.out.println(noOfRows);
+			pst.close();
+			conn.close();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
 
 
 }
